@@ -8,13 +8,14 @@ const DEFAULT_MODULE_KEY = 'defaultCdnModuleKey____';
 
 class WebpackCdnPlugin {
   constructor({
-    modules, prod,
+    modules, prod, prodUrls,
     prodUrl = '//unpkg.com/:name@:version/:path',
     devUrl = ':name/:path', publicPath,
   }) {
     this.modules = Array.isArray(modules) ? { [DEFAULT_MODULE_KEY]: modules } : modules;
     this.prod = prod !== false;
     this.prefix = publicPath;
+    this.urls = prodUrls;
     this.url = this.prod ? prodUrl : devUrl;
   }
 
@@ -32,13 +33,13 @@ class WebpackCdnPlugin {
       this.prefix += slash;
     }
 
-    const getArgs = [this.url, this.prefix, this.prod, output.publicPath];
-
     compiler.plugin('compilation', (compilation) => {
       compilation.plugin('html-webpack-plugin-before-html-generation', (data, callback) => {
         const moduleId = data.plugin.options.cdnModule;
         if (moduleId !== false) {
           const modules = this.modules[moduleId || Reflect.ownKeys(this.modules)[0]];
+          const url = this.urls && this.urls[moduleId] ? this.urls[moduleId] : this.url;
+          const getArgs = [url, this.prefix, this.prod, output.publicPath];
           if (modules) {
             data.assets.js = WebpackCdnPlugin._getJs(modules, ...getArgs).concat(data.assets.js);
             data.assets.css = WebpackCdnPlugin._getCss(modules, ...getArgs).concat(data.assets.css);
