@@ -1,4 +1,5 @@
 import path from 'path';
+import HtmlWebpackPlugin from 'html-webpack-plugin';
 
 const empty = '';
 const slash = '/';
@@ -33,8 +34,9 @@ class WebpackCdnPlugin {
       this.prefix += slash;
     }
 
-    compiler.plugin('compilation', (compilation) => {
-      compilation.plugin('html-webpack-plugin-before-html-generation', (data, callback) => {
+    const onCompilation = (compilation) => {
+      const hooks =  HtmlWebpackPlugin.getHooks(compilation);
+      hooks.beforeAssetTagGeneration.tapAsync('webpackCdnPlugin', (data, callback) => {
         const moduleId = data.plugin.options.cdnModule;
         if (moduleId !== false) {
           const modules = this.modules[moduleId || Reflect.ownKeys(this.modules)[0]];
@@ -47,7 +49,10 @@ class WebpackCdnPlugin {
         }
         callback(null, data);
       });
-    });
+    };
+
+    compiler.hooks.compilation.tap('webpackCdnPlugin', onCompilation);
+
     const externals = compiler.options.externals || {};
 
     Reflect.ownKeys(this.modules).forEach((key) => {
